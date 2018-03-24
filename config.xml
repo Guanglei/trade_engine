@@ -1,0 +1,17 @@
+<config>
+    <broker-id>9999</broker-id>
+    <investor-id>113752</investor-id>
+    <password>123456</password>
+    <order-entry>
+        <ip>180.168.146.187</ip>
+        <port>10000</port>
+    </order-entry>
+    <market-data>
+        <ip>180.168.146.187</ip>
+        <port>10010</port>
+        <subscription>
+            <inst>rb1803</inst>
+        </subscription>
+    </market-data>
+
+</config>
