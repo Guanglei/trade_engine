@@ -73,6 +73,8 @@ namespace trade_engine
 
 		void process_loop()
 		{
+            BOOST_LOG_SCOPED_THREAD_TAG("ThreadID", boost::this_thread::get_id());
+
 			while (true)
 			{
 				if (stop_)

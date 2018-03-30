@@ -5,7 +5,7 @@
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
 #include <stdio.h>
-#include "strategy.h"
+#include "strategy/strategy.h"
 
 
 namespace trade_engine
@@ -49,13 +49,14 @@ namespace trade_engine
 		LOGGER << "Login successfully...";
 
 		ReqSettlementInfoConfirm();
-
+    
 		return true;
 	}
 
 	//override virtual method
 	void order_entry::OnFrontConnected()
 	{
+        BOOST_LOG_SCOPED_THREAD_TAG("ThreadID", boost::this_thread::get_id());
 		LOGGER << "order_entry::OnFrontConnected...";
 		connected_cv_.notify_all();
 	}
@@ -234,13 +235,13 @@ namespace trade_engine
 
 		if(trader_api_->ReqOrderInsert(&req, ++request_id_) == 0)
 		{
-			LOGGER << "Succeed to send order insert request " << req.OrderRef;
+			LOGGER << "Succeed to send market order " << req.OrderRef;
 			order_ref = order_ref_;
 			return true;
 		}
 		else
 		{
-			LOGGER << "Failed to send order insert request " << req.OrderRef;
+			LOGGER << "Failed to send market order " << req.OrderRef;
 			return false;
 		}
 	}
@@ -269,13 +270,13 @@ namespace trade_engine
 
 		if(trader_api_->ReqOrderInsert(&req, ++request_id_) == 0)
 		{
-			LOGGER << "Succeed to send order insert request " << req.OrderRef;
+			LOGGER << "Succeed to send limit order " << req.OrderRef;
 			order_ref = order_ref_;
 			return true;
 		}
 		else
 		{
-			LOGGER << "Failed to send order insert request " << req.OrderRef;
+			LOGGER << "Failed to send limit order " << req.OrderRef;
 			return false;
 		}
 	}
@@ -290,6 +291,7 @@ namespace trade_engine
 		strcpy(req.InvestorID, investor_id_.c_str());
 		strcpy(req.InstrumentID, inst_id.c_str());
 		snprintf(req.OrderRef, sizeof(req.OrderRef), "%d", order_ref_);
+        req.ActionFlag = THOST_FTDC_AF_Delete;
 
 		if(trader_api_->ReqOrderAction(&req, ++request_id_) == 0)
 		{
@@ -306,6 +308,8 @@ namespace trade_engine
 	void order_entry::OnRspOrderInsert(CThostFtdcInputOrderField *pInputOrder, 
 									   CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 	{
+		LOGGER << "order_entry::OnRspOrderInsert... " << pRspInfo->ErrorID << " " << pRspInfo->ErrorMsg;
+
 		IsErrorRspInfo(pRspInfo);
 
 		order_event e;
@@ -314,7 +318,6 @@ namespace trade_engine
 		e.direction = get_order_direction(pInputOrder->Direction);
 		e.inst = instrument_factory::get_instance().create(pInputOrder->InstrumentID);
 		e.offset = get_offset_flag(pInputOrder->CombOffsetFlag[0]);
-		LOGGER << "Receive new order insert response... " << pRspInfo->ErrorID << " " << pRspInfo->ErrorMsg;
 		//strat_->deliver_order_event(e);
 	}
 
@@ -326,6 +329,8 @@ namespace trade_engine
 	void order_entry::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, 
 									   CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 	{
+		LOGGER << "order_entry::OnRspOrderAction... " << pRspInfo->ErrorID << " " << pRspInfo->ErrorMsg;
+
 		IsErrorRspInfo(pRspInfo);
 
 		if(is_own_message(*pInputOrderAction))

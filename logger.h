@@ -47,7 +47,7 @@ inline boost::shared_ptr<sink_t> global_sink()
 
 inline bool initialize_logger(const char* log_path)
 {
-	boost::shared_ptr< std::ostream > strm(new std::ofstream(log_path));
+	boost::shared_ptr< std::ostream > strm(new std::ofstream(log_path, std::ofstream::out | std::ofstream::app));
 	if (!strm->good())
 	{
 		std::cerr << "Failed to open log file: " << log_path << std::endl;
@@ -71,6 +71,7 @@ inline bool initialize_logger(const char* log_path)
 	// Add some attributes too
 	logging::core::get()->add_global_attribute("TimeStamp", attrs::local_clock());
 	logging::core::get()->add_global_attribute("RecordID", attrs::counter< unsigned int >());
+    BOOST_LOG_SCOPED_THREAD_TAG("ThreadID", boost::this_thread::get_id());
 
 	LOGGER << "Succeed to initialize logger...";
 

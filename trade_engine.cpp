@@ -1,12 +1,22 @@
+#include <boost/chrono.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
 
 #include "types.h"
 #include "order_entry.h"
 #include "market_data.h"
-#include "strategy.h"
+#include "strategy/strategy.h"
 #include "logger.h"
 
+bool stop_flush_log = false;
+void flush_log()
+{
+    while(!stop_flush_log)
+    {
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(500)); 
+	    global_sink()->flush();
+    }
+}
 
 int main(int argc, char** argv)
 {	
@@ -20,6 +30,8 @@ int main(int argc, char** argv)
 	{
 		return -1;
 	}
+
+    BOOST_LOG_SCOPED_THREAD_TAG("ThreadID", boost::this_thread::get_id());
 
 	trade_engine::trade_config tc;
 	if(!tc.read_from_file(argv[1]))
@@ -52,13 +64,11 @@ int main(int argc, char** argv)
 		return -1;
 	}
     
-    /*
 	if(!oe.start())
 	{
 		LOGGER << "Failed to start order entry...";
 		return -1;
 	}
-    */
 
 	/*
 	if(!strat.start())
@@ -81,6 +91,7 @@ int main(int argc, char** argv)
 		trade_engine::instrument* new_inst = trade_engine::instrument_factory::get_instance().create(i->c_str());
 		if(new_inst)
 		{
+            LOGGER << "create a new instrument id [" << new_inst->id << "] internal_id [" << new_inst->internal_id << "]";
 			md.subscribe_md(*new_inst);
 		}
 	}
@@ -88,35 +99,62 @@ int main(int argc, char** argv)
 	trade_engine::instrument_factory::get_instance().stop_create();
 	
     
-    /*
-	int order_ref = 20;
-	oe.send_order_insert_request("rb1610", '0', THOST_FTDC_D_Buy, 1,2100, order_ref, false);
-	std::cout << "press enter to cancel..." << std::endl;
-	char c = 0;
-	std::cin >> c;
-	oe.send_order_cancel_request("rb1610", order_ref);
-    */
+	int order_ref = 0;
+    std::string symbol;
+    char side = 'S';
+    char tif = 'I';
+    uint32_t qty = 0;
+    int32_t price = 0;
+    char pos_offset = 'O';
 
 	boost::thread strat_thread(boost::bind(&trade_engine::strategy::process_loop, &strat));
 
-	while(true)
+	boost::thread log_flush_thread(boost::bind(flush_log));
+   
+    bool quit = false;
+	while(!quit)
 	{	
-		/*
-		std::cout << "Input Q|q to exit:" << std::endl;
+        std::cout << "Input 'N $symbol $side(B|S) $tif(D|I) $qty $price $pos' to enter new limit order" << std::endl;
+        std::cout << "Input 'M $symbol $side(B|S) $qty $pos' to enter new market order" << std::endl;
+        std::cout << "Input 'C $symbol $order_ref'" << std::endl;
+		std::cout << "Input 'Q' to exit:" << std::endl;
 		char c = 0;
 		std::cin >> c;
-		if(c=='q' || c=='Q')
-		{	
-			strat.stop();
-			break;
-		}
-		*/
+        switch(c)
+        {
+            case 'N':
+                {
+                    std::cin >> symbol >> side >> tif >> qty >> price >> pos_offset;
+                    oe.send_order_insert_request(symbol, pos_offset == 'O' ? THOST_FTDC_OF_Open : THOST_FTDC_OF_CloseToday, 
+                                side == 'B' ? THOST_FTDC_D_Buy : THOST_FTDC_D_Sell, qty, price, order_ref, tif=='I');
+                    break;
+                }
+            case 'M':
+                {
+                    std::cin >> symbol >> side >> qty >> pos_offset;
+                    oe.send_order_insert_request(symbol, pos_offset == 'O' ? THOST_FTDC_OF_Open : THOST_FTDC_OF_CloseToday, side == 'B' ? THOST_FTDC_D_Buy : THOST_FTDC_D_Sell, qty, order_ref);
+                    break;
+                }
+            case 'C':
+                {
+                    int oid = 0;
+                    std::cin >> symbol >> oid;
+                    oe.send_order_cancel_request(symbol, oid);
+                    break;
+                }
+            case 'Q':
+                {
 
-		//global_sink()->stop();
-		global_sink()->flush();
+			        strat.stop();
+                    stop_flush_log = true;
+                    quit = true;
+			        break;
+                }
+        }
 	}
 
 	strat_thread.join();
+    log_flush_thread.join();
 
 	global_sink()->stop();
 	global_sink()->flush();

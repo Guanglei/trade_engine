@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.8.9)
 
 project (ctp_trading_engine)
 
-set (TRADING_ENGINE_SRC market_data.cpp order_entry.cpp strategy.cpp trade_engine.cpp types.cpp)
+file(GLOB STRAT_SRC ./strategy/*.cpp)
+set (TRADING_ENGINE_SRC market_data.cpp order_entry.cpp ${STRAT_SRC} trade_engine.cpp types.cpp)
 add_executable(trading_engine ${TRADING_ENGINE_SRC})
 
 include_directories(.)

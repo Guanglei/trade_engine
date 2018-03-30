@@ -360,7 +360,7 @@ namespace trade_engine
 
 	void strategy::handle_md_update_event(md_event& e)
 	{
-		LOGGER << "Current " << (e.internal_inst_id == near_inst_->internal_id ? "near" : "far") << " inst tob - bid: " << e.bid_qty << "@" << e.bid_price
+		LOGGER << "instrument [" << e.internal_inst_id << "] tob - bid: " << e.bid_qty << "@" << e.bid_price
 		<< " ask: " << e.ask_qty << "@" << e.ask_price << " last px: " << e.last_price;
 
 		if(current_active_combo_ && current_active_combo_->status == position_status::open )

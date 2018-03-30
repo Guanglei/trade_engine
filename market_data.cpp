@@ -1,5 +1,5 @@
 #include "market_data.h"
-#include "strategy.h"
+#include "strategy/strategy.h"
 #include <iostream>
 #include <boost/thread.hpp>
 #include "util.h"
@@ -43,6 +43,7 @@ namespace trade_engine
 		}
 
 		LOGGER << "MD Login successfully...";
+
 		return true;
 	}
 
@@ -64,6 +65,7 @@ namespace trade_engine
 
 	void market_data::OnFrontConnected()
 	{	
+        BOOST_LOG_SCOPED_THREAD_TAG("ThreadID", boost::this_thread::get_id());
 		LOGGER << "market_data::OnFrontConnected...";
 		connected_cv_.notify_all();
 	}
