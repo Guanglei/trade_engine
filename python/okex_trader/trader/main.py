@@ -15,8 +15,8 @@ import pdb
 
 url = "wss://real.okex.com:10440/websocket/okexapi"
 
-apikey = 'a815131d-b1f4-4c76-91f9-e016b46dce60'
-secretkey = 'A77B2084AFC76AF0A74EF16AF3FD2BCD'
+apikey = ''
+secretkey = ''
 
 exchange = "okex"
 
